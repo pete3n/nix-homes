@@ -18,8 +18,8 @@ let
 in
 {
   imports = [
-		./secrets.nix
-		./specialisations.nix
+    ./secrets.nix
+    ./specialisations.nix
   ]
   ++ [ inputs.nix-slop-dev.nixosModules.sandboxed ];
 
@@ -71,14 +71,14 @@ in
 
   # The p22 internal CA. Trusted root cert, means this machine accepts anything
   # that CA signs.
-  security.pki.certificateFiles = lib.optionals (hasTag "p22" tags) [ ../secrets/certs/p22-ca.crt ];
+  security.pki.certificateFiles = lib.optionals (hasTag "p22" tags) [ ../../secrets/certs/p22-ca.crt ];
 
   age = {
     # Build key for remote build machines
     secrets =
       lib.optionalAttrs (hasTag "p22" tags) {
         p22-build-key = {
-          file = "${inputs.nixSpace}/hosts/${host}/secrets/p22-build-key.age";
+          file = "${inputs.nix-space}/hosts/${host}/secrets/p22-build-key.age";
           path = "/etc/nix/p22-build-key";
           owner = "root";
           group = "root";
@@ -87,7 +87,7 @@ in
       }
       // lib.optionalAttrs (hasTag "crypto" tags) {
         bitcoind-rpc-hmac = {
-          file = ../secrets/bitcoind-rpc-hmac.age;
+          file = ../../secrets/bitcoind-rpc-hmac.age;
           owner = config.nixSpace.services.bitcoind.user;
           mode = "0400";
         };
@@ -95,14 +95,29 @@ in
   };
 
   nixSpace = {
-    nix.remoteBuilders = {
-      enable = true;
-      machines.black8 = {
-        publicKey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIO70Au6FegohwKFygshDnN9TGll69m4cc1WXMqa8tXl/";
-        system = "x86_64-linux";
-        sshKeyFile = config.age.secrets.p22-build-key.path;
-        maxJobs = 28;
-        speedFactor = 4;
+    nix = {
+      cache = {
+        enable = true;
+        substituters =
+          lib.optional (hasTag "p22" tags) {
+            url = "http://backupsvr.p22:8000/";
+          }
+          ++ [
+            {
+              url = "https://nix-community.cachix.org/";
+              publicKey = "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs=";
+            }
+          ];
+      };
+      remoteBuilders = {
+        enable = true;
+        machines.black8 = {
+          publicKey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIO70Au6FegohwKFygshDnN9TGll69m4cc1WXMqa8tXl/";
+          system = "x86_64-linux";
+          sshKeyFile = config.age.secrets.p22-build-key.path;
+          maxJobs = 28;
+          speedFactor = 4;
+        };
       };
     };
 

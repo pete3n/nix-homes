@@ -15,6 +15,11 @@ in
   imports = [
     ./secrets.nix
   ];
+
+  # Determinate Nix owns /etc/nix/nix.conf. Without this, nix-darwin writes
+  # its own and the two fight.
+  determinateNix.enable = true;
+
   # nix-darwin's own versioning, unrelated to NixOS's stateVersion string.
   system = {
     stateVersion = 5;

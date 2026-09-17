@@ -53,12 +53,11 @@ in
       keep-outputs = true
       keep-derivations = true
     '';
-
   };
 
   # The p22 internal CA. Trusted root cert, means this machine accepts anything
   # that CA signs.
-  security.pki.certificateFiles = lib.optionals (hasTag "p22" tags) [ ../secrets/certs/p22-ca.crt ];
+  security.pki.certificateFiles = lib.optionals (hasTag "p22" tags) [ ../../secrets/certs/p22-ca.crt ];
 
   nixSpace = {
     nix = {
@@ -208,7 +207,7 @@ in
 
   age.secrets = lib.optionalAttrs (hasTag "crypto" tags) {
     bitcoind-rpc-hmac = {
-      file = ../secrets/bitcoind-rpc-hmac.age;
+      file = ../../secrets/bitcoind-rpc-hmac.age;
       owner = config.nixSpace.services.bitcoind.user;
       mode = "0400";
     };

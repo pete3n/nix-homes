@@ -170,6 +170,7 @@
             { nixpkgs.hostPlatform = attrs.system; }
             { nixpkgs.pkgs = pkgsFor.${attrs.system}; }
             inputs.agenix.darwinModules.default
+            inputs.determinate.darwinModules.default
             # The darwin entry point, not systemModules: NixOS and nix-darwin
             # are separate module systems and never share an evaluation.
             "${nix-space}/system-modules/darwin.nix"
