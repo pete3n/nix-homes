@@ -1,14 +1,3 @@
-# Userspace configuration for pete.
-#
-# SCOPE: this repo owns one user's machines — the system configuration and the
-# home configuration for each. It consumes nixSpace, which owns the modules,
-# the library, and the fleet's own host facts.
-#
-# A second user on a shared machine would have their own repo. Nothing
-# structural stops two repos from each defining nixosConfigurations.<host>:
-# both evaluate, and whichever one you last switched from is the running
-# system. That is a convention about who administers a machine rather than
-# something the tooling enforces.
 {
   inputs = {
     determinate.url = "https://flakehub.com/f/DeterminateSystems/determinate/*";
@@ -25,8 +14,8 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    nixSpace = {
-      url = "git+file:///home/pete/srv/git/nix.git?ref=main&shallow=1";
+    nix-space = {
+      url = "git+https://github.com/pete3n/nix-space.git?ref=main&shallow=1";
       flake = false;
     };
 
@@ -57,11 +46,6 @@
       url = "github:ryantm/agenix";
       inputs.darwin.follows = "nix-darwin";
     };
-
-    # TODO: add nix-darwin when the Mac Mini is ported. A darwin host needs
-    # darwinSystem rather than nixosSystem and a darwinConfigurations output
-    # alongside nixosConfigurations; the per-host structure below is otherwise
-    # unchanged.
   };
 
   outputs =
@@ -69,44 +53,30 @@
       determinate,
       nixpkgs,
       home-manager,
-      nixSpace,
+      nix-darwin,
+      nix-space,
       self,
       ...
     }@inputs:
     let
       inherit (nixpkgs) lib;
 
-      nixSpaceLib = import "${nixSpace}/lib" { inherit lib; };
+      nixSpaceLib = import "${nix-space}/lib" { inherit lib; };
       inherit (nixSpaceLib.tags) hasTag;
 
-      systemModules = "${nixSpace}/system-modules";
-      homeModules = "${nixSpace}/home-modules";
+      systemModules = "${nix-space}/system-modules";
+      homeModules = "${nix-space}/home-modules";
 
-      # ---- hosts ------------------------------------------------------------
-      #
-      # An explicit list rather than readDir: the flake should say what it
-      # builds without being evaluated to find out, and an enumeration would
-      # have to filter out the sibling directories here anyway.
-      #
-      # Each host directory holds attrs.nix plus its configuration and home
-      # files. The user is the repo, so the directory is just the host — hence
-      # no user@host in paths, and no `./. + "..."` needed to work around `@`
-      # not being legal in a path token.
+      # Each host directory holds attrs.nix plus its configuration and home files.
       hostNames = [
         "black8"
+        "metallic1"
         "silver16"
       ];
+      hostAttrs = lib.genAttrs hostNames (host: nixSpaceLib.attrs.fromFile ./hosts/${host}/attrs.nix);
+      systems = lib.unique (lib.mapAttrsToList (_: attr: attr.system) hostAttrs);
 
-      hostAttrs = lib.genAttrs hostNames (h: nixSpaceLib.attrs.fromFile ./${h}/attrs.nix);
-
-      systems = lib.unique (lib.mapAttrsToList (_: a: a.system) hostAttrs);
-
-      # ---- overlays ---------------------------------------------------------
-      #
-      # Built once, not per host. An overlay reads its platform from the
-      # package set it is applied to, so it needs no host metadata — which is
-      # also more correct than passing attrs, since the two can disagree under
-      # cross-compilation.
+      # User supplied overlays
       overlays = (import ./overlays { inherit inputs lib nixSpaceLib; }).all;
 
       # One package set per target system, so two hosts of the same
@@ -119,14 +89,13 @@
         }
       );
 
-      # cudaSupport is a nixpkgs CONFIG value, not an overlay: it changes how
+      # cudaSupport is a nixpkgs config value, not an overlay: it changes how
       # every CUDA-capable derivation is built, so it cannot be applied to an
-      # instance that already exists. The dGPU specialisation therefore needs
-      # its own package set.
+      # instance that already exists.
       #
-      # Expect a large local build — this rebuilds from source anything the
-      # binary cache holds only in non-CUDA form.
-      pkgsCudaFor = lib.genAttrs systems (
+      # Expect a large local build: this will rebuild from source anything the
+      # binary cache doesn't already have built for CUDA.
+      pkgsCudaFor = lib.genAttrs (lib.filter nixSpaceLib.platform.isLinux systems) (
         system:
         import nixpkgs {
           inherit system overlays;
@@ -137,13 +106,18 @@
         }
       );
 
-      specialArgsFor = host: {
-        inherit inputs self nixSpaceLib;
-        nixSpaceAttrs = hostAttrs.${host};
-        pkgsCuda = pkgsCudaFor.${hostAttrs.${host}.system};
-      };
-
-      # ---- builders ---------------------------------------------------------
+      specialArgsFor =
+        host:
+        let
+          attrs = hostAttrs.${host};
+        in
+        {
+          inherit inputs self nixSpaceLib;
+          nixSpaceAttrs = attrs;
+        }
+        // lib.optionalAttrs (nixSpaceLib.platform.isLinux attrs.system) {
+          pkgsCuda = pkgsCudaFor.${attrs.system};
+        };
 
       mkNixosConfiguration =
         host:
@@ -163,26 +137,17 @@
 
             determinate.nixosModules.default
             inputs.agenix.nixosModules.default
-
-            # Every library module, unconditionally. Importing enables
-            # nothing — each module gates its config on its own enable — so
-            # the cost is option declarations only.
             systemModules
+            # This contains hardware specific configurations for a system
+            # that users should generally not touch.
+            "${nix-space}/hosts/${host}"
+            ./hosts/${host}/configuration.nix
 
-            # Hardware facts for this machine, from the fleet repo. A host's
-            # disk layout is something every user of that machine has to agree
-            # on, which is why it does not live here.
-            "${nixSpace}/hosts/${host}"
-
-            ./${host}/configuration.nix
-
-            # Tag-coordinated enables: the facts that the system and home
-            # configurations both act on and cannot read from each other.
+            # Configure relevant system tags here
             {
               nixSpace.hyprland.enable = hasTag "hyprland" tags;
               nixSpace.plasma.enable = hasTag "plasma" tags;
             }
-
             (
               { lib, pkgs, ... }:
               {
@@ -191,6 +156,24 @@
                 '';
               }
             )
+          ];
+        };
+
+      mkDarwinConfiguration =
+        host:
+        let
+          attrs = hostAttrs.${host};
+        in
+        nix-darwin.lib.darwinSystem {
+          specialArgs = specialArgsFor host;
+          modules = [
+            { nixpkgs.hostPlatform = attrs.system; }
+            { nixpkgs.pkgs = pkgsFor.${attrs.system}; }
+            inputs.agenix.darwinModules.default
+            # The darwin entry point, not systemModules: NixOS and nix-darwin
+            # are separate module systems and never share an evaluation.
+            "${nix-space}/system-modules/darwin.nix"
+            ./hosts/${host}/configuration.nix
           ];
         };
 
@@ -207,8 +190,10 @@
             homeModules
             ./home.nix
 
+            # Configure relevant home-manager tags here
             {
               nixSpace = {
+                aerospace.enable = hasTag "aerospace" tags;
                 hyprland.enable = hasTag "hyprland" tags;
                 hyprdesktop.enable = hasTag "hyprdesktop" tags;
                 plasmadesktop.enable = hasTag "plasmadesktop" tags;
@@ -217,11 +202,17 @@
           ]
           ++ lib.optional (nixSpaceLib.platform.isLinux attrs.system) ./home-linux.nix
           ++ lib.optional (nixSpaceLib.platform.isDarwin attrs.system) ./home-darwin.nix
-          ++ [ (./. + "/${host}/home.nix") ];
+          # Host specific home configuration settings, such as display layout.
+          ++ [ ./hosts/${host}/home.nix ];
         };
+
+      linuxHosts = lib.filter (host: nixSpaceLib.platform.isLinux hostAttrs.${host}.system) hostNames;
+      darwinHosts = lib.filter (host: nixSpaceLib.platform.isDarwin hostAttrs.${host}.system) hostNames;
+
     in
     {
-      nixosConfigurations = lib.genAttrs hostNames mkNixosConfiguration;
+      nixosConfigurations = lib.genAttrs linuxHosts mkNixosConfiguration;
+      darwinConfigurations = lib.genAttrs darwinHosts mkDarwinConfiguration;
 
       homeConfigurations = lib.listToAttrs (
         map (

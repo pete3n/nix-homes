@@ -18,14 +18,9 @@ let
 in
 {
   imports = [
-    # These provide different boot menu options for configurations that must
-    # but implemented prior to booting Linux, such as an external GPU
-    ./dgpu.nix
-    ../secrets/yubi-age.nix
-    ../secrets/git-ssh.nix
+		./secrets.nix
+		./specialisations.nix
   ]
-  ++ lib.optional (hasTag "vpn-user" tags) ../secrets/p22-vpn.nix
-
   ++ [ inputs.nix-slop-dev.nixosModules.sandboxed ];
 
   system.nixos.tags = [

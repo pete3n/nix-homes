@@ -14,7 +14,7 @@
   ...
 }:
 let
-  nsOverlays = import "${inputs.nixSpace}/overlays" {
+  nsOverlays = import "${inputs.nix-space}/overlays" {
     inherit lib nixSpaceLib nixSpaceAttrs;
     inherit (inputs) nixpkgs-unstable;
   };

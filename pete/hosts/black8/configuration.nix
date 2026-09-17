@@ -16,11 +16,9 @@ let
 in
 {
   imports = [
-    ./egpu.nix
-    ../secrets/yubi-age.nix
-    ../secrets/git-ssh.nix
-  ]
-  ++ lib.optional (hasTag "vpn-user" tags) ../secrets/p22-vpn.nix;
+    ./secrets.nix
+    ./specialisations.nix
+  ];
 
   system.nixos.tags = [
     "nixSpace"
