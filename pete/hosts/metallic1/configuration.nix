@@ -1,6 +1,7 @@
 # mettalic1 system configuration
 #
 {
+  config,
   lib,
   pkgs,
   nixSpaceLib,
@@ -111,7 +112,10 @@ in
   # zsh at the system level, so /etc/zshrc sources the Nix profile before any
   # user config runs. home-manager configures the user half; without this the
   # login shell has no Nix paths and nothing in the profile is reachable.
-  programs.zsh.enable = true;
+  programs.zsh = {
+    enable = true;
+    dotDir = "${config.xdg.configHome}/zsh";
+  };
   environment.shells = [ pkgs.zsh ];
 
   time.timeZone = "America/New_York";
