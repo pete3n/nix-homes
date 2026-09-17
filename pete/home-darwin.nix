@@ -5,6 +5,7 @@
 # <host>/home.nix.
 #
 {
+  config,
   lib,
   pkgs,
   nixSpaceLib,
@@ -22,15 +23,21 @@ in
     programs = {
       workstationCommon.enable = true;
       launchers.fzf.enable = lib.mkDefault (hasTag "aerospace" tags);
-      shells.zsh.enable = lib.mkDefault true;
+      shells.zsh = {
+        enable = lib.mkDefault true;
+        dotDir = "${config.xdg.configHome}/zsh";
+      };
       yazi.plugins.office = false;
     };
 
-    security.gpg.pinentry = lib.mkIf (hasTag "gpg-user" tags) {
-      # pinentry-gnome3 has no macOS build. pinentry_mac is the only one that
-      # prompts correctly from a launchd-started agent, and it has Keychain
-      # integration the others lack.
-      graphical = pkgs.pinentry_mac;
+    security = {
+      yubikey.tools.oathGuiPackage = pkgs.local.yubioathDarwin;
+      gpg.pinentry = lib.mkIf (hasTag "gpg-user" tags) {
+        # pinentry-gnome3 has no macOS build. pinentry_mac is the only one that
+        # prompts correctly from a launchd-started agent, and it has Keychain
+        # integration the others lack.
+        graphical = pkgs.pinentry_mac;
+      };
     };
   };
 
