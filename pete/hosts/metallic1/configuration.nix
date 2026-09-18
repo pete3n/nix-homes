@@ -18,7 +18,24 @@ in
 
   # Determinate Nix owns /etc/nix/nix.conf. Without this, nix-darwin writes
   # its own and the two fight.
-  determinateNix.enable = true;
+  determinateNix = {
+    enable = true;
+    determinateNix.customSettings = {
+      trusted-users = [
+        "root"
+        user
+      ];
+      substituters = [
+        "http://backupsvr.p22:8000/"
+        "https://nix-community.cachix.org/"
+        "https://cache.nixos.org/"
+      ];
+      trusted-public-keys = [
+        "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
+        "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
+      ];
+    };
+  };
 
   # nix-darwin's own versioning, unrelated to NixOS's stateVersion string.
   system = {
