@@ -22,7 +22,10 @@ in
 
     programs = {
       workstationCommon.enable = true;
-      launchers.fzf.enable = lib.mkDefault (hasTag "aerospace" tags);
+      launchers = {
+        fzf.enable = lib.mkDefault (hasTag "aerospace" tags);
+        primary = lib.mkDefault "fzf";
+      };
       shells.zsh = {
         enable = lib.mkDefault true;
         dotDir = "${config.xdg.configHome}/zsh";
