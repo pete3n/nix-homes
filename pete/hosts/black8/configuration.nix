@@ -57,7 +57,9 @@ in
 
   # The p22 internal CA. Trusted root cert, means this machine accepts anything
   # that CA signs.
-  security.pki.certificateFiles = lib.optionals (hasTag "p22" tags) [ ../../secrets/certs/p22-ca.crt ];
+  security.pki.certificateFiles = lib.optionals (hasTag "p22" tags) [
+    ../../secrets/certs/p22-ca.crt
+  ];
 
   nixSpace = {
     nix = {
@@ -189,19 +191,20 @@ in
     wireless.enable = false;
     networkmanager.enable = false;
 
-    interfaces = {
-      net10g.ipv4 = {
-        addresses = [
-          {
-            address = "192.168.1.8";
-            prefixLength = 24;
-          }
-        ];
-      };
-    };
+    # net10g is enslaved to br0 so VM guests (idm1) can attach to the p22 LAN
+    # at layer 2 and get real LAN addresses. black8's own static IP moves onto
+    # the bridge; net10g itself carries no address. libvirt creates guest taps
+    # on br0 directly, so no qemu-bridge-helper is involved.
+    bridges.br0.interfaces = [ "net10g" ];
+    interfaces.br0.ipv4.addresses = [
+      {
+        address = "192.168.1.8";
+        prefixLength = 24;
+      }
+    ];
     defaultGateway = {
       address = "192.168.1.1";
-      interface = "net10g";
+      interface = "br0";
     };
   };
 
