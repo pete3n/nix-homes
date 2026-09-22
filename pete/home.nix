@@ -82,7 +82,7 @@ in
       hostSync = {
         enable = true;
         localHost = host;
-				# TODO: How to dynamically create this from configurations?
+        # TODO: How to dynamically create this from configurations?
         hosts = {
           silver16.platform = "linux";
           black8.platform = "linux";
@@ -206,7 +206,7 @@ in
         # IdentityAgent = "none" forces the resident key rather than whatever
         # the agent offers first, so the touch prompt is predictable.
         "black8" = {
-          HostName = "black8.p22";
+          HostName = "black8.p22.lan";
           User = user;
           IdentityFile = "${home}/.ssh/id_ed25519_sk_rk_p22";
           IdentitiesOnly = true;
@@ -217,16 +217,24 @@ in
           ControlPath = "~/.ssh/control-%r@%h:%p";
           ControlPersist = "10m";
         };
-        "backupsvr" = {
-          HostName = "backupsvr.p22";
+        "backup" = {
+          HostName = "backup.p22.lan";
           User = "root";
           IdentityFile = "${home}/.ssh/id_ed25519_sk_rk_p22";
           IdentitiesOnly = true;
           IdentityAgent = "none";
         };
-        "mediasvr" = {
-          HostName = "media.p22";
+        "media" = {
+          HostName = "media.p22.lan";
           User = "root";
+          IdentityFile = "${home}/.ssh/id_ed25519_sk_rk_p22";
+          IdentitiesOnly = true;
+          IdentityAgent = "none";
+        };
+        "idm1" = {
+          HostName = "localhost";
+          Port = 22220;
+          User = "pete";
           IdentityFile = "${home}/.ssh/id_ed25519_sk_rk_p22";
           IdentitiesOnly = true;
           IdentityAgent = "none";
