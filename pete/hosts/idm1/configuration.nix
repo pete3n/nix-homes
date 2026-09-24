@@ -104,6 +104,11 @@ in
     ../../secrets/certs/p22-ca.crt
   ];
 
+  # Trust the p22.lan SSH Host CA: Domain hosts showing a host certificate are
+  # recognised with no known_hosts entry, and short names are tried as
+  # <name>.p22.lan first (ADR-0009).
+  nixSpace.ssh.domainTrust.domains = lib.optional (hasTag "p22" tags) nixSpaceLib.domainDescriptor."p22.lan";
+
   # idm1 IS the certificate authority for the p22 Lab (Step 2). step-ca serves
   # ACME for internal TLS and holds the SSH host + user CAs. The OIDC provisioner
   # that mints user/elevated certs waits on kanidm (Step 3) — see the module.

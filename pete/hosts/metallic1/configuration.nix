@@ -108,6 +108,11 @@ in
     ../../secrets/certs/p22-ca.crt
   ];
 
+  # Trust the p22.lan SSH Host CA: Domain hosts showing a host certificate are
+  # recognised with no known_hosts entry, and short names are tried as
+  # <name>.p22.lan first (ADR-0009).
+  nixSpace.ssh.domainTrust.domains = lib.optional (hasTag "p22" tags) nixSpaceLib.domainDescriptor."p22.lan";
+
   # zsh at the system level, so /etc/zshrc sources the Nix profile before any
   # user config runs. home-manager configures the user half; without this the
   # login shell has no Nix paths and nothing in the profile is reachable.
