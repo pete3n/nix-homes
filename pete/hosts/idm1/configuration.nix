@@ -111,6 +111,10 @@ in
     enable = true;
     fqdn = node.fqdn;
 
+    # Nothing this CA issues may name anything outside the Domain.
+    allowedDomains = domain.ca.allowedDomains;
+    allowedAddresses = domain.ca.allowedAddresses;
+
     # Public certs (store paths are fine): the already-trusted root, and the
     # intermediate the operator has signed with the offline root key.
     rootCertFile = ../../secrets/certs/p22-ca.crt;
@@ -123,7 +127,23 @@ in
     ssh = {
       hostCAKeyFile = config.age.secrets."step-ca/ssh_host_ca".path;
       userCAKeyFile = config.age.secrets."step-ca/ssh_user_ca".path;
+
+      # Operator-held JWK provisioner for each host's FIRST host cert; renewals
+      # then go through SSHPOP (ADR-0009). Both files are public (the private
+      # key is password-encrypted, and the password stays with the operator).
+      hostProvisioner = {
+        publicKeyFile = "${inputs.nix-space}/hosts/${host}/pki/hosts-provisioner.pub.json";
+        encryptedKeyFile = "${inputs.nix-space}/hosts/${host}/pki/hosts-provisioner.key.jwe";
+      };
     };
+  };
+
+  # idm1 presents its own SSH host certificate, renewed daily against its own
+  # step-ca. The first cert is operator-signed (see the host-cert sheet).
+  nixSpace.services.ssh-host-cert = {
+    enable = true;
+    caUrl = domain.ca.url;
+    rootCertFile = ../../secrets/certs/p22-ca.crt;
   };
 
   # The CA's private material, encrypted to idm1's host key + pete's YubiKeys
@@ -147,9 +167,6 @@ in
   # Trust the SSH USER CA now, so idm1 accepts user certificates the moment
   # Step 3's OIDC provisioner starts minting them — no later Nix edit needed to
   # grant access (ADR-0003). The public key is a committed, non-secret file.
-  # (idm1 presenting its OWN host certificate is a post-deploy runtime step:
-  # issue it with `step ssh certificate` and set HostCertificate — see the
-  # bootstrap sheet.)
   services.openssh.settings.TrustedUserCAKeys =
     "${inputs.nix-space}/hosts/${host}/pki/ssh_user_ca.pub";
 
