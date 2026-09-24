@@ -143,6 +143,14 @@ in
     };
   };
 
+  # idm1's own TLS cert (idm1.p22.lan) from its own step-ca over ACME, 7-day
+  # lifetime. Nothing serves it yet: kanidm (Step 3) will.
+  nixSpace.services.internal-acme = {
+    enable = true;
+    directoryUrl = domain.ca.acmeDirectory;
+    certs = [ node.fqdn ];
+  };
+
   # idm1 presents its own SSH host certificate, renewed daily against its own
   # step-ca. The first cert is operator-signed (see the host-cert sheet).
   nixSpace.services.ssh-host-cert = {
