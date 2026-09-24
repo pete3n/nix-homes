@@ -12,6 +12,7 @@
   config,
   lib,
   pkgs,
+  inputs,
   nixSpaceLib,
   nixSpaceAttrs,
   ...
@@ -19,6 +20,11 @@
 let
   inherit (nixSpaceAttrs) host tags;
   inherit (nixSpaceLib.tags) hasTag;
+
+  # The Lab Identity Domain's descriptor (ADR-0005) — the single source of the
+  # per-domain facts step-ca needs (CA subject, node FQDN/address, endpoints).
+  domain = nixSpaceLib.domainDescriptor."p22.lan";
+  node = domain.nodes.${host};
 in
 {
   system.nixos.tags = [
@@ -90,11 +96,62 @@ in
     servers = [ "192.168.1.1" ];
   };
 
-  # Trust the existing p22 CA, so idm1 can reach internal TLS services. idm1
-  # will later BECOME the CA (step-ca), but that is a later build step.
+  # Trust the domain's offline root (P22-CA). step-ca (below) runs as an
+  # intermediate signed by this root, so everything it issues — including idm1's
+  # own TLS — already chains under a Fleet-trusted anchor (ADR-0008). The root
+  # cert stays trusted here; nothing to re-trust.
   security.pki.certificateFiles = lib.optionals (hasTag "p22" tags) [
     ../../secrets/certs/p22-ca.crt
   ];
+
+  # idm1 IS the certificate authority for the p22 Lab (Step 2). step-ca serves
+  # ACME for internal TLS and holds the SSH host + user CAs. The OIDC provisioner
+  # that mints user/elevated certs waits on kanidm (Step 3) — see the module.
+  nixSpace.services.step-ca = {
+    enable = true;
+    fqdn = node.fqdn;
+
+    # Public certs (store paths are fine): the already-trusted root, and the
+    # intermediate the operator has signed with the offline root key.
+    rootCertFile = ../../secrets/certs/p22-ca.crt;
+    intermediateCertFile = "${inputs.nix-space}/hosts/${host}/pki/p22-intermediate.crt";
+
+    # Private key material: agenix targets decrypted at activation, owned by the
+    # step-ca service account. Never store-path literals.
+    intermediateKeyFile = config.age.secrets."step-ca/intermediate.key".path;
+    intermediatePasswordFile = config.age.secrets."step-ca/intermediate.password".path;
+    ssh = {
+      hostCAKeyFile = config.age.secrets."step-ca/ssh_host_ca".path;
+      userCAKeyFile = config.age.secrets."step-ca/ssh_user_ca".path;
+    };
+  };
+
+  # The CA's private material, encrypted to idm1's host key + pete's YubiKeys
+  # (rules in nix-space/hosts/idm1/secrets/secrets.nix). The .age files are
+  # produced by the Step 2 bootstrap and committed under nix-space.
+  age.secrets =
+    let
+      caSecret = name: {
+        file = "${inputs.nix-space}/hosts/${host}/secrets/${name}.age";
+        owner = config.nixSpace.services.step-ca.user;
+        mode = "0400";
+      };
+    in
+    {
+      "step-ca/intermediate.key" = caSecret "step-ca/intermediate.key";
+      "step-ca/intermediate.password" = caSecret "step-ca/intermediate.password";
+      "step-ca/ssh_host_ca" = caSecret "step-ca/ssh_host_ca";
+      "step-ca/ssh_user_ca" = caSecret "step-ca/ssh_user_ca";
+    };
+
+  # Trust the SSH USER CA now, so idm1 accepts user certificates the moment
+  # Step 3's OIDC provisioner starts minting them — no later Nix edit needed to
+  # grant access (ADR-0003). The public key is a committed, non-secret file.
+  # (idm1 presenting its OWN host certificate is a post-deploy runtime step:
+  # issue it with `step ssh certificate` and set HostCertificate — see the
+  # bootstrap sheet.)
+  services.openssh.settings.TrustedUserCAKeys =
+    "${inputs.nix-space}/hosts/${host}/pki/ssh_user_ca.pub";
 
   # INTERIM bootstrap: passwordless sudo for wheel so the remote deploy
   # (`nixos-rebuild --target-host pete@idm1.p22 --use-remote-sudo`) works
