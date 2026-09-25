@@ -12,7 +12,7 @@
     "nixvim"
     "p22"
     "power-user"
-		"yubi-u2f"
+    "yubi-u2f"
   ];
 
   specialisations = [ ];

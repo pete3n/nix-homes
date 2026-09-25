@@ -107,6 +107,12 @@ in
   };
 
   nixSpace = {
+
+    # Trust the p22.lan SSH Host CA: Domain hosts showing a host certificate are
+    # recognised with no known_hosts entry, and short names are tried as
+    # <name>.p22.lan first (ADR-0009).
+    ssh.domainTrust.domains = lib.optional (hasTag "p22" tags) nixSpaceLib.domainDescriptor."p22.lan";
+
     nix = {
       cache = {
         enable = true;
@@ -148,8 +154,6 @@ in
         11435
       ];
     };
-
-		#ssh.domainTrust.domains = lib.optional (hasTag "p22" tags) nixSpaceLib.domainDescriptor."p22.lan";
 
     security = {
       yubikey = {

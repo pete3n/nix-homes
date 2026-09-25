@@ -1,7 +1,6 @@
 # Home-manager configuration specific to black8
 #
-{ ... }:
-{
+_: {
   nixSpace = {
     hyprland = {
       # The eGPU is only present in the egpu specialisation, but this option

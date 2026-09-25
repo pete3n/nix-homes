@@ -70,6 +70,7 @@
       # Each host directory holds attrs.nix plus its configuration and home files.
       hostNames = [
         "black8"
+        "idm1"
         "metallic1"
         "silver16"
       ];
@@ -210,6 +211,13 @@
       linuxHosts = lib.filter (host: nixSpaceLib.platform.isLinux hostAttrs.${host}.system) hostNames;
       darwinHosts = lib.filter (host: nixSpaceLib.platform.isDarwin hostAttrs.${host}.system) hostNames;
 
+      # Only workstations get a home-manager configuration. A server archetype
+      # is headless with no per-user desktop, so building one for it is both
+      # meaningless and would drag in desktop modules it must not have.
+      homeHosts = lib.filter (
+        host: nixSpaceLib.archetype.isWorkstation hostAttrs.${host}.archetype
+      ) hostNames;
+
     in
     {
       nixosConfigurations = lib.genAttrs linuxHosts mkNixosConfiguration;
@@ -218,7 +226,7 @@
       homeConfigurations = lib.listToAttrs (
         map (
           host: lib.nameValuePair "${hostAttrs.${host}.user}@${host}" (mkHomeConfiguration host)
-        ) hostNames
+        ) homeHosts
       );
     };
 }
