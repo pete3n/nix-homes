@@ -80,6 +80,11 @@ in
     ../../secrets/certs/p22-ca.crt
   ];
 
+  # Trust the p22.lan SSH Host CA: Domain hosts showing a host certificate are
+  # recognised with no known_hosts entry, and short names are tried as
+  # <name>.p22.lan first.
+  nixSpace.ssh.domainTrust.domains = lib.optional (hasTag "p22" tags) nixSpaceLib.domainDescriptor."p22.lan";
+
   # idm1 IS the certificate authority for the p22 Lab. step-ca serves
   # ACME for internal TLS and holds the SSH host + user CAs.
   nixSpace.services = {
@@ -102,11 +107,6 @@ in
       intermediatePasswordFile = config.age.secrets."step-ca/intermediate.password".path;
 
       ssh = {
-        # Trust the p22.lan SSH Host CA: Domain hosts showing a host certificate are
-        # recognised with no known_hosts entry, and short names are tried as
-        # <name>.p22.lan first.
-        domainTrust.domains = lib.optional (hasTag "p22" tags) nixSpaceLib.domainDescriptor."p22.lan";
-
         hostCAKeyFile = config.age.secrets."step-ca/ssh_host_ca".path;
         userCAKeyFile = config.age.secrets."step-ca/ssh_user_ca".path;
 

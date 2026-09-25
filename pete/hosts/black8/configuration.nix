@@ -121,16 +121,16 @@ in
       };
     };
 
-    services = {
-      # Trust the p22.lan SSH Host CA: Domain hosts showing a host certificate are
-      # recognised with no known_hosts entry, and short names are tried as
-      # <name>.p22.lan first.
-      ssh.domainTrust.domains = lib.optional (hasTag "p22" tags) nixSpaceLib.domainDescriptor."p22.lan";
+    # Trust the p22.lan SSH Host CA: Domain hosts showing a host certificate are
+    # recognised with no known_hosts entry, and short names are tried as
+    # <name>.p22.lan first.
+    ssh.domainTrust.domains = lib.optional (hasTag "p22" tags) nixSpaceLib.domainDescriptor."p22.lan";
 
+    services = {
       # black8 presents an SSH host certificate for black8.p22.lan, renewed daily
       # against idm1's step-ca. The operator signs the first cert (see the
       # host-cert sheet).
-      services.ssh-host-cert = lib.mkIf (hasTag "p22" tags) {
+      ssh-host-cert = lib.mkIf (hasTag "p22" tags) {
         enable = true;
         caUrl = nixSpaceLib.domainDescriptor."p22.lan".ca.url;
         rootCertFile = ../../secrets/certs/p22-ca.crt;

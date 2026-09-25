@@ -20,7 +20,7 @@ in
   # its own and the two fight.
   determinateNix = {
     enable = true;
-    determinateNix.customSettings = {
+    customSettings = {
       trusted-users = [
         "root"
         user
