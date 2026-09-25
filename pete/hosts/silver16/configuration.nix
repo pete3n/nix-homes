@@ -69,9 +69,21 @@ in
     '';
   };
 
-  # The p22 internal CA. Trusted root cert, means this machine accepts anything
-  # that CA signs.
-  security.pki.certificateFiles = lib.optionals (hasTag "p22" tags) [ ../../secrets/certs/p22-ca.crt ];
+  # yubikey-pam-fprint.nix's fprintd timing, interim until pam.nix has
+  # fprintTimeout / fprintMaxTries. Rides on nixpkgs' own fprintd rule the
+  # way the module rides on the u2f rule; nothing is redefined.
+  security = {
+    pam.services.sudo.rules.auth.fprintd.settings = {
+      "max-tries" = 1;
+      timeout = 3;
+    };
+
+    # The p22 internal CA. Trusted root cert, means this machine accepts anything
+    # that CA signs.
+    pki.certificateFiles = lib.optionals (hasTag "p22" tags) [
+      ../../secrets/certs/p22-ca.crt
+    ];
+  };
 
   age = {
     # Build key for remote build machines
@@ -136,6 +148,8 @@ in
         11435
       ];
     };
+
+		#ssh.domainTrust.domains = lib.optional (hasTag "p22" tags) nixSpaceLib.domainDescriptor."p22.lan";
 
     security = {
       yubikey = {
@@ -260,14 +274,6 @@ in
     # Configure network proxy if necessary
     # proxy.default = "http://user:password@proxy:port/";
     # proxy.noProxy = "127.0.0.1,localhost,internal.domain";
-  };
-
-  # yubikey-pam-fprint.nix's fprintd timing, interim until pam.nix has
-  # fprintTimeout / fprintMaxTries. Rides on nixpkgs' own fprintd rule the
-  # way the module rides on the u2f rule; nothing is redefined.
-  security.pam.services.sudo.rules.auth.fprintd.settings = {
-    "max-tries" = 1;
-    timeout = 3;
   };
 
   services = {
