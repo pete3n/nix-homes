@@ -139,7 +139,7 @@ in
           domain.groups.sshUsers
           domain.groups.admins
         ];
-        package = pkgs.kanidm_1_8;
+        package = pkgs.kanidm_1_11;
       }
     );
 

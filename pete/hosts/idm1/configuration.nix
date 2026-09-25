@@ -202,6 +202,9 @@ in
               certDuration = "1h";
               defaultCertDuration = "1h";
               adminGroup = domain.groups.admins;
+              # An admin cert needs a passkey touch within the last 2 minutes,
+              # not just a kanidm browser session that's still open.
+              maxLoginAge = 120;
             }
           ];
         };
@@ -210,7 +213,7 @@ in
       # kanidm, the directory, served with idm1's internal ACME cert.
       kanidm-server = {
         enable = true;
-        package = pkgs.kanidm_1_8;
+        package = pkgs.kanidm_1_11;
         inherit (node) fqdn;
         inherit (domain) domain;
         inherit (domain.idm) origin;
