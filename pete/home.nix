@@ -232,8 +232,7 @@ in
           IdentityAgent = "none";
         };
         "idm1" = {
-          HostName = "localhost";
-          Port = 22220;
+          HostName = "idm1.p22.lan";
           User = "pete";
           IdentityFile = "${home}/.ssh/id_ed25519_sk_rk_p22";
           IdentitiesOnly = true;
