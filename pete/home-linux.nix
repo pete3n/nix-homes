@@ -36,8 +36,8 @@ in
 
       remote = {
         enable = true;
-        remmina = pkgs.remmina;
-        rustdesk = pkgs.rustdesk;
+        inherit (pkgs) remmina;
+        inherit (pkgs) rustdesk;
       };
     };
 

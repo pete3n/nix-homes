@@ -71,12 +71,16 @@ in
 
   # The p22 internal CA. Trusted root cert, means this machine accepts anything
   # that CA signs.
-  security.pki.certificateFiles = lib.optionals (hasTag "p22" tags) [ ../../secrets/certs/p22-ca.crt ];
+  security.pki.certificateFiles = lib.optionals (hasTag "p22" tags) [
+    ../../secrets/certs/p22-ca.crt
+  ];
 
   # Trust the p22.lan SSH Host CA: Domain hosts showing a host certificate are
   # recognised with no known_hosts entry, and short names are tried as
   # <name>.p22.lan first (ADR-0009).
-  nixSpace.ssh.domainTrust.domains = lib.optional (hasTag "p22" tags) nixSpaceLib.domainDescriptor."p22.lan";
+  nixSpace.ssh.domainTrust.domains =
+    lib.optional (hasTag "p22" tags)
+      nixSpaceLib.domainDescriptor."p22.lan";
 
   age = {
     # Build key for remote build machines
