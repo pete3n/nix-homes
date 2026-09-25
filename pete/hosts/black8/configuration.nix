@@ -126,6 +126,23 @@ in
     # <name>.p22.lan first.
     ssh.domainTrust.domains = lib.optional (hasTag "p22" tags) nixSpaceLib.domainDescriptor."p22.lan";
 
+    # Everyday SSH users and elevated sessions from the p22.lan domain log in
+    # with a kanidm-backed cert. kanidm-unixd must match idm1's kanidm release.
+    identity.login = lib.mkIf (hasTag "p22" tags) (
+      let
+        domain = nixSpaceLib.domainDescriptor."p22.lan";
+      in
+      {
+        enable = true;
+        inherit domain;
+        acceptGroups = [
+          domain.groups.sshUsers
+          domain.groups.admins
+        ];
+        package = pkgs.kanidm_1_8;
+      }
+    );
+
     services = {
       # black8 presents an SSH host certificate for black8.p22.lan, renewed daily
       # against idm1's step-ca. The operator signs the first cert (see the
