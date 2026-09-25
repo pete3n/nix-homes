@@ -79,22 +79,19 @@
       ];
     };
 
-    # Triggers egpuLink when the card appears, so hotplugging the enclosure
-    # does not need a reboot to get the symlink.
-    services.udev.extraRules = ''
-      ACTION=="add", SUBSYSTEM=="pci", ATTRS{vendor}=="0x10de", ATTRS{device}=="0x2216", ENV{SYSTEMD_WANTS}+="egpuLink.service", TAG+="systemd"
-    '';
+    services = {
+      # Triggers egpuLink when the card appears, so hotplugging the enclosure
+      # does not need a reboot to get the symlink.
+      udev.extraRules = ''
+        ACTION=="add", SUBSYSTEM=="pci", ATTRS{vendor}=="0x10de", ATTRS{device}=="0x2216", ENV{SYSTEMD_WANTS}+="egpuLink.service", TAG+="systemd"
+      '';
 
-    services.xserver.videoDrivers = [
-      "modesetting"
-      "nvidia"
-    ];
+      xserver.videoDrivers = [
+        "modesetting"
+        "nvidia"
+      ];
 
-    services.kmscon.enable = lib.mkForce false;
-
-    # TODO: nvidia-scripts came from outputs.nixosModules in the old flake.
-    # Locate it in nixSpace or pete3n-mods and restore nvrun; hypr-nvidia is
-    # compositor-specific and belongs with the Hyprland module rather than
-    # here.
+      kmscon.enable = lib.mkForce false;
+    };
   };
 }

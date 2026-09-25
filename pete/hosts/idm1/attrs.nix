@@ -17,11 +17,9 @@
   isHomeAlone = false;
   useHomebrew = false;
 
-  # INTERIM bootstrap access, valid until the identity plane exists. `ssh-user`
+  # interim bootstrap access, valid until the identity plane exists. `ssh-user`
   # authorizes the YubiKey below; `sudo-user` puts pete in wheel so the remote
-  # deploy can `--use-remote-sudo`. ADR-0001's Standard/Elevated identities
-  # (build-step 6) replace this — idm1 will then get its accounts from kanidm,
-  # not from this file.
+  # deploy can `--use-remote-sudo`.
   tags = [
     "ssh-user"
     "sudo-user"
