@@ -9,7 +9,21 @@
 #
 # and paste the output line. The PIN is asked for by each service's PAM
 # policy (u2fPin), so the credential itself doesn't need +pin.
+#
+# An Elevated Identity (`<user>-adm`) reuses its person's credentials: that
+# is what lets `su - <user>-adm` take the same YubiKey, PIN and touch with
+# nothing extra to enroll (ADR-0001 amendment).
+let
+  # Rehearsal identity (kanidm), for the stage 2 tests on silver16.
+  tester = [
+    # Primary YubiKey
+
+  ];
+in
 {
+  inherit tester;
+  tester-adm = tester;
+
   pete = [
     # Primary YubiKey
     "QJhubjStzXZiCJ0+gxOuUh7qXSOfoOeMQ+VhG8w9rMmPkfmgGlXhIv9FCHH9ITgthznLbXiQdldL5Hl3gPJm3w==,QFlJ1JV3W53qRY3Lv/HrleJcNeCkkAD4/eNpBvvHejMt0vsEWdnF/ThaI3e48EtB4uZuVmaAIevyfdrMsvwx9g==,es256,+presence"

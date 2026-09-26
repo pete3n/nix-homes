@@ -139,6 +139,26 @@ in
       };
     };
 
+    # People from the p22.lan domain log in here as kanidm accounts: at the
+    # console with a YubiKey (pam_u2f), over SSH with a YubiKey key from
+    # kanidm. Local pete keeps winning over the kanidm pete until his own
+    # migration (stage 4).
+    identity.login = lib.mkIf (hasTag "p22" tags) (
+      let
+        domain = nixSpaceLib.domainDescriptor."p22.lan";
+      in
+      {
+        enable = true;
+        inherit domain;
+        acceptGroups = [
+          domain.groups.sshUsers
+          domain.groups.admins
+        ];
+        localAccountOverrides = [ "pete" ];
+        package = pkgs.kanidm_1_11;
+      }
+    );
+
     # The local way in when kanidm login is broken. Opened only by the
     # break-glass YubiKeys in the domain descriptor, with PIN and touch.
     identity.breakglass = lib.mkIf (hasTag "p22" tags) {
@@ -190,6 +210,12 @@ in
           };
           polkit-1 = {
             fprint = true;
+          };
+          # `su - <user>-adm` checks the target account's YubiKey with PIN
+          # and touch. No fingerprint: escalation is always the YubiKey. The
+          # password stays for local accounts that have one.
+          su = {
+            u2fPin = true;
           };
           hyprlock = {
             fprint = true;
