@@ -35,6 +35,17 @@ in
 
     security = {
       yubikey.tools.oathGuiPackage = pkgs.local.yubioathDarwin;
+
+      # pam_u2f credentials in ~/.config/Yubico/u2f_keys, for sudo on this
+      # Mac (origin pam://p22). Linux Workstations use the central
+      # /etc/u2f_mappings on pam://p22.lan instead and ignore this file.
+      yubikey.u2f = {
+        enable = true;
+        credentials = [
+          "jPXIHluUKJNDbiCSQ5+DRfMrG+ZNqMyQXTHSyByi5XHSXHNhZC2CduqlqNOIutx2NIc8Qhn2omlCFpcOoDjukw==,FQlfOdBDXUlixODcx+4gDsFIyLaX21KWqkEmbVx3ny7iwJpL43O2BRMAcArBJWJ/tEsz2/lxI/gZk7Dn9093vA==,es256,+presence"
+          "4a218pdZXDWigFWVcGDubvTbdAN9cAlp9+r0CPezvDojRPeou4j1m6vv4ZqW70jzNhAd9HD4gV0ykhC4Uoxi0A==,ftm749QLZ7sgH9ITIyb+f3Wn4BXDjK32+qIMlkfkOnMZ8On6GWBteaITzdCZ6PRzbTCQPZ6TC+ylGLw/rn0Ewg==,es256,+presence"
+        ];
+      };
       gpg.pinentry = lib.mkIf (hasTag "gpg-user" tags) {
         # pinentry-gnome3 has no macOS build. pinentry_mac is the only one that
         # prompts correctly from a launchd-started agent, and it has Keychain
