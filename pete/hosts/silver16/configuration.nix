@@ -139,6 +139,13 @@ in
       };
     };
 
+    # The local way in when kanidm login is broken. Opened only by the
+    # break-glass YubiKeys in the domain descriptor, with PIN and touch.
+    identity.breakglass = lib.mkIf (hasTag "p22" tags) {
+      enable = true;
+      domain = nixSpaceLib.domainDescriptor."p22.lan";
+    };
+
     virtualisation = {
       enable = true;
       emulatedSystems = [
@@ -159,12 +166,13 @@ in
       yubikey = {
         enable = true;
 
-        # yubikey-pam-u2f.nix minus its global enable. Same origin and appid, so
-        # nothing is re-enrolled; users = {} keeps reading ~/.config/Yubico/u2f_keys.
+        # Console logins use the domain's origin and one central mapping
+        # (/etc/u2f_mappings) instead of each user's ~/.config/Yubico/u2f_keys.
+        # The break-glass account adds its own keys to the same mapping.
         u2f = {
           enable = true;
-          # P22 tag
-          origin = "pam://p22";
+          origin = nixSpaceLib.domainDescriptor."p22.lan".pamOrigin;
+          users = import ../../console-keys.nix;
         };
 
         # The global enable put u2f on EVERY service. These are the ones that had
@@ -175,8 +183,10 @@ in
             fprint = true;
             password = false;
           };
+          # A YubiKey at the console needs its PIN too, not just a touch.
           login = {
             fprint = true;
+            u2fPin = true;
           };
           polkit-1 = {
             fprint = true;

@@ -257,6 +257,13 @@ in
       inherit domain;
       acceptGroups = [ domain.groups.admins ];
     };
+
+    # The local way in when kanidm is broken, which on idm1 is also the way
+    # to fix kanidm. SSH only: idm1 has no YubiKey at its console.
+    identity.breakglass = {
+      enable = true;
+      inherit domain;
+    };
   };
 
   # The CA's private material, encrypted to idm1's host key + admin's YubiKeys
