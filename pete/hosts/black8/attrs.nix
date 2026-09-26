@@ -36,6 +36,9 @@
   ];
 
   sshPubKeys = [
-    "sk-ssh-ed25519@openssh.com AAAAGnNrLXNzaC1lZDI1NTE5QG9wZW5zc2guY29tAAAAIH0sKLi0IwMU62lLAEBiPudg4OxqQGY1n3MOsV8rAJybAAAAB3NzaDpwMjI= ssh:p22"
+    #Primary Yubikey
+    "sk-ssh-ed25519@openssh.com AAAAGnNrLXNzaC1lZDI1NTE5QG9wZW5zc2guY29tAAAAIJFGmlG/CcvESUuFCGx66DyW9GUqWoMR+Almk1i+E98CAAAACHNzaDpwZXRl pete-primary@p22.lan"
+    #Backup Yubikey
+    "sk-ssh-ed25519@openssh.com AAAAGnNrLXNzaC1lZDI1NTE5QG9wZW5zc2guY29tAAAAICjaf/0nEezgVctqf3IkMC3T6oeS6RP3ap1owC939VgWAAAACHNzaDpwZXRl pete-backup@p22.lan"
   ];
 }
