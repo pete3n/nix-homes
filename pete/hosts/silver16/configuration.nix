@@ -155,6 +155,12 @@ in
           domain.groups.admins
         ];
         localAccountOverrides = [ "pete" ];
+        # Local groups for kanidm people (rehearsal: two harmless ones that
+        # always exist). pete's full set comes with his migration (stage 4).
+        localGroups = {
+          cdrom = [ domain.groups.sshUsers ];
+          users = [ domain.groups.sshUsers ];
+        };
         package = pkgs.kanidm_1_11;
       }
     );
