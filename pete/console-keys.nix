@@ -12,8 +12,8 @@
 {
   pete = [
     # Primary YubiKey
-
+    "QJhubjStzXZiCJ0+gxOuUh7qXSOfoOeMQ+VhG8w9rMmPkfmgGlXhIv9FCHH9ITgthznLbXiQdldL5Hl3gPJm3w==,QFlJ1JV3W53qRY3Lv/HrleJcNeCkkAD4/eNpBvvHejMt0vsEWdnF/ThaI3e48EtB4uZuVmaAIevyfdrMsvwx9g==,es256,+presence"
     # Backup YubiKey
-
+    "iVeYN+JIHdFG4BmjPbuKMGcAHQysan+cadDGGNdWQClRLL6mFPvbrJYjDGbZhAes7q9bmVDAU0ET0UQG5UaINg==,Gb0pZvKg9+EokUqiu4243o7IXstpibYbue3xvqV0MjMBPjZRlRr4u3i+gkzrAq2Knu2WD28dLb3iinImE8NnrQ==,es256,+presence"
   ];
 }
