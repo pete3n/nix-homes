@@ -130,6 +130,20 @@ in
               mailAddresses = [ "pete-adm@p22.lan" ];
               groups = [ admins ];
             };
+
+            # Rehearsal identities for the Workstation and migration tests, so
+            # pete is never the one at risk. uids are set by hand to match the
+            # LDAP-style numbers the migration keeps.
+            tester = {
+              displayName = "tester";
+              mailAddresses = [ "tester@p22.lan" ];
+              groups = [ sshUsers ];
+            };
+            tester-adm = {
+              displayName = "tester (admin)";
+              mailAddresses = [ "tester-adm@p22.lan" ];
+              groups = [ admins ];
+            };
           };
 
           systems.oauth2 = {
@@ -262,7 +276,6 @@ in
       "step-ca/ssh_host_ca" = caSecret "step-ca/ssh_host_ca";
       "step-ca/ssh_user_ca" = caSecret "step-ca/ssh_user_ca";
     };
-
 
   # Bootstrap: passwordless sudo for wheel so the remote deploy
   # (`nixos-rebuild --target-host pete@idm1.p22 --use-remote-sudo`) works
