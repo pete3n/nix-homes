@@ -70,7 +70,7 @@ in
             # nginx pass-through for cache.nixos.org and nix-community. No
             # publicKey: it re-serves upstream-signed paths and signs nothing
             # itself.
-            url = "http://backupsvr.p22:8000/";
+            url = "http://backupsvr.p22.lan:8000/";
           }
           ++ [
             {
@@ -169,7 +169,7 @@ in
 
       nfsMount = lib.mkIf (hasTag "p22" tags) {
         enable = true;
-        server = "backupsvr.p22";
+        server = "backupsvr.p22.lan";
         shares = {
           share.remotePath = "/mnt/user/share";
           open.remotePath = "/mnt/user/open";

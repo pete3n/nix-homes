@@ -118,7 +118,7 @@ in
         enable = true;
         substituters =
           lib.optional (hasTag "p22" tags) {
-            url = "http://backupsvr.p22:8000/";
+            url = "http://backupsvr.p22.lan:8000/";
           }
           ++ [
             {
@@ -233,7 +233,7 @@ in
     services = {
       nfsMount = lib.mkIf (hasTag "p22" tags) {
         enable = true;
-        server = "backupsvr.p22";
+        server = "backupsvr.p22.lan";
         shares = {
           share.remotePath = "/mnt/user/share";
           open.remotePath = "/mnt/user/open";
