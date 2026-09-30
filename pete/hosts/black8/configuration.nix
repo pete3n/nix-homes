@@ -62,6 +62,11 @@ in
   ];
 
   nixSpace = {
+    # Trust the p22.lan SSH Host CA: Domain hosts showing a host certificate are
+    # recognised with no known_hosts entry, and short names are tried as
+    # <name>.p22.lan first.
+    ssh.domainTrust.domains = lib.optional (hasTag "p22" tags) nixSpaceLib.domainDescriptor."p22.lan";
+
     nix = {
       cache = {
         enable = true;
@@ -70,7 +75,7 @@ in
             # nginx pass-through for cache.nixos.org and nix-community. No
             # publicKey: it re-serves upstream-signed paths and signs nothing
             # itself.
-            url = "http://backupsvr.p22:8000/";
+            url = "http://backup.p22.lan:8000/";
           }
           ++ [
             {
@@ -122,15 +127,10 @@ in
     };
 
     services = {
-      # Trust the p22.lan SSH Host CA: Domain hosts showing a host certificate are
-      # recognised with no known_hosts entry, and short names are tried as
-      # <name>.p22.lan first.
-      ssh.domainTrust.domains = lib.optional (hasTag "p22" tags) nixSpaceLib.domainDescriptor."p22.lan";
-
       # black8 presents an SSH host certificate for black8.p22.lan, renewed daily
       # against idm1's step-ca. The operator signs the first cert (see the
       # host-cert sheet).
-      services.ssh-host-cert = lib.mkIf (hasTag "p22" tags) {
+      ssh-host-cert = lib.mkIf (hasTag "p22" tags) {
         enable = true;
         caUrl = nixSpaceLib.domainDescriptor."p22.lan".ca.url;
         rootCertFile = ../../secrets/certs/p22-ca.crt;
@@ -245,7 +245,7 @@ in
         DNSSEC = "allow-downgrade";
         DNSOverTLS = "opportunistic";
         DNS = [ "192.168.1.1" ];
-        Domains = [ "~p22" ];
+        Domains = [ "~." "p22.lan" ];
         FallbackDNS = [
           "1.1.1.1"
           "8.8.8.8"
