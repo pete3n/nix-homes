@@ -20,13 +20,13 @@ in
   # its own and the two fight.
   determinateNix = {
     enable = true;
-    determinateNix.customSettings = {
+    customSettings = {
       trusted-users = [
         "root"
         user
       ];
       substituters = [
-        "http://backupsvr.p22:8000/"
+        "http://backup.p22.lan:8000/"
         "https://nix-community.cachix.org/"
         "https://cache.nixos.org/"
       ];
@@ -90,7 +90,7 @@ in
       enable = true;
       substituters =
         lib.optional (hasTag "p22" tags) {
-          url = "http://backupsvr.p22:8000/";
+          url = "http://backup.p22.lan:8000/";
         }
         ++ [
           {
@@ -102,7 +102,7 @@ in
 
     services.nfsMount = lib.mkIf (hasTag "p22" tags) {
       enable = true;
-      server = "backupsvr.p22";
+      server = "backup.p22.lan";
       shares = {
         share.remotePath = "/mnt/user/share";
         open.remotePath = "/mnt/user/open";

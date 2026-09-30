@@ -138,20 +138,19 @@ in
         enable = true;
 
         # Import resident keys from the YubiKey if any are missing from ~/.ssh.
+        # The Primary Key's handles; the Backup Key's are named *_backup by
+        # hand for now (ssh-keygen -K names both the same).
         sshImport.expectedKeys.userKeys = [
           "id_ed25519_sk_rk_aws"
           "id_ed25519_sk_rk_github"
           "id_ed25519_sk_rk_linode"
+          # Standard and Elevated Identity keys held in kanidm.
+          "id_ed25519_sk_rk_pete"
+          "id_ed25519_sk_rk_pete-adm"
+          # Legacy: only the Unraid root logins (backup, media) still use it,
+          # until they get a replacement key.
           "id_ed25519_sk_rk_p22"
         ];
-
-        u2f = {
-          enable = true;
-          credentials = [
-            "jPXIHluUKJNDbiCSQ5+DRfMrG+ZNqMyQXTHSyByi5XHSXHNhZC2CduqlqNOIutx2NIc8Qhn2omlCFpcOoDjukw==,FQlfOdBDXUlixODcx+4gDsFIyLaX21KWqkEmbVx3ny7iwJpL43O2BRMAcArBJWJ/tEsz2/lxI/gZk7Dn9093vA==,es256,+presence"
-            "4a218pdZXDWigFWVcGDubvTbdAN9cAlp9+r0CPezvDojRPeou4j1m6vv4ZqW70jzNhAd9HD4gV0ykhC4Uoxi0A==,ftm749QLZ7sgH9ITIyb+f3Wn4BXDjK32+qIMlkfkOnMZ8On6GWBteaITzdCZ6PRzbTCQPZ6TC+ylGLw/rn0Ewg==,es256,+presence"
-          ];
-        };
 
         tools = {
           legacyOtp = true;
@@ -205,10 +204,15 @@ in
       // lib.optionalAttrs (hasTag "p22" tags) {
         # IdentityAgent = "none" forces the resident key rather than whatever
         # the agent offers first, so the touch prompt is predictable.
+        # The Primary Key's handle first, then the Backup Key's. With the
+        # Backup Key plugged in, the first one costs a wasted PIN and touch.
         "black8" = {
           HostName = "black8.p22.lan";
           User = user;
-          IdentityFile = "${home}/.ssh/id_ed25519_sk_rk_p22";
+          IdentityFile = [
+            "${home}/.ssh/id_ed25519_sk_rk_pete"
+            "${home}/.ssh/id_ed25519_sk_rk_pete_backup"
+          ];
           IdentitiesOnly = true;
           IdentityAgent = "none";
           # Multiplexing: one touch per 10 minutes rather than one per
@@ -217,6 +221,8 @@ in
           ControlPath = "~/.ssh/control-%r@%h:%p";
           ControlPersist = "10m";
         };
+        # The Unraid boxes have no kanidm: root with the legacy key until
+        # they get a replacement.
         "backup" = {
           HostName = "backup.p22.lan";
           User = "root";
@@ -231,10 +237,15 @@ in
           IdentitiesOnly = true;
           IdentityAgent = "none";
         };
+        # idm1 accepts only Elevated Identities, so it's pete-adm there,
+        # deploys included.
         "idm1" = {
           HostName = "idm1.p22.lan";
-          User = "pete";
-          IdentityFile = "${home}/.ssh/id_ed25519_sk_rk_p22";
+          User = "pete-adm";
+          IdentityFile = [
+            "${home}/.ssh/id_ed25519_sk_rk_pete-adm"
+            "${home}/.ssh/id_ed25519_sk_rk_pete-adm_backup"
+          ];
           IdentitiesOnly = true;
           IdentityAgent = "none";
         };

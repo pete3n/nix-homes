@@ -72,6 +72,86 @@ in
       enable = lib.mkDefault true;
       servers = [ "192.168.1.1" ];
     };
+
+    kanidm = {
+      # The kanidm and kanidmd commands, for the bootstrap and account recovery.
+      client.enable = true;
+
+      # People and groups in kanidm, and the two OAuth2 clients step-ca trusts.
+      # Passkeys can't be declared: each person enrolls theirs once, from a
+      # reset link (see the bootstrap sheet).
+      provision =
+        let
+          inherit (domain.groups) admins sshUsers;
+
+          # `step ssh login` catches the browser on this local address when kanidm
+          # sends it back. It matches the provisioners' listenAddress.
+          loginRedirect = "http://127.0.0.1:10000";
+
+          # One public client per step-ca provisioner. Only members of `groups` get
+          # a token at all, and the ssh_groups claim tells step-ca which of those
+          # groups the person is in.
+          stepClient = displayName: groups: {
+            inherit displayName;
+            public = true;
+            enableLocalhostRedirects = true;
+            preferShortUsername = true;
+            originUrl = [
+              loginRedirect
+              "http://localhost:10000"
+            ];
+            originLanding = loginRedirect;
+            scopeMaps = lib.genAttrs groups (_group: [
+              "openid"
+              "email"
+              "profile"
+            ]);
+            claimMaps.ssh_groups.valuesByGroup = lib.genAttrs groups (group: [ group ]);
+          };
+        in
+        {
+          enable = true;
+
+          groups = {
+            ${admins} = { };
+            ${sshUsers} = { };
+          };
+
+          # Standard and Elevated identities for the same person. Only the
+          # Elevated one is in `admins`.
+          persons = {
+            pete = {
+              displayName = "Pete";
+              mailAddresses = [ "pete@p22.lan" ];
+              groups = [ sshUsers ];
+            };
+            pete-adm = {
+              displayName = "Pete (admin)";
+              mailAddresses = [ "pete-adm@p22.lan" ];
+              groups = [ admins ];
+            };
+
+            # Rehearsal identities for the Workstation and migration tests, so
+            # pete is never the one at risk. uids are set by hand to match the
+            # LDAP-style numbers the migration keeps.
+            tester = {
+              displayName = "tester";
+              mailAddresses = [ "tester@p22.lan" ];
+              groups = [ sshUsers ];
+            };
+            tester-adm = {
+              displayName = "tester (admin)";
+              mailAddresses = [ "tester-adm@p22.lan" ];
+              groups = [ admins ];
+            };
+          };
+
+          systems.oauth2 = {
+            ${domain.oidc.standard.clientId} = stepClient "SSH certificates" [ sshUsers ];
+            ${domain.oidc.elevated.clientId} = stepClient "SSH admin certificates" [ admins ];
+          };
+        };
+    };
   };
 
   # Trust the domain's offline root (P22-CA). step-ca (below) runs as an
@@ -80,59 +160,109 @@ in
     ../../secrets/certs/p22-ca.crt
   ];
 
-  # idm1 IS the certificate authority for the p22 Lab. step-ca serves
-  # ACME for internal TLS and holds the SSH host + user CAs.
-  nixSpace.services = {
-    step-ca = {
-      enable = true;
-      inherit (node) fqdn;
+  nixSpace = {
+    # Trust the p22.lan SSH Host CA: Domain hosts showing a host certificate are
+    # recognised with no known_hosts entry, and short names are tried as
+    # <name>.p22.lan first.
+    ssh.domainTrust.domains = lib.optional (hasTag "p22" tags) nixSpaceLib.domainDescriptor."p22.lan";
 
-      # Nothing this CA issues may name anything outside the Domain.
-      allowedDomains = domain.ca.allowedDomains;
-      allowedAddresses = domain.ca.allowedAddresses;
+    # idm1 IS the certificate authority for the p22 Lab. step-ca serves
+    # ACME for internal TLS and holds the SSH host + user CAs.
+    services = {
+      step-ca = {
+        enable = true;
+        inherit (node) fqdn;
 
-      # Public certs (store paths are fine): the already-trusted root, and the
-      # intermediate the operator has signed with the offline root key.
-      rootCertFile = ../../secrets/certs/p22-ca.crt;
-      intermediateCertFile = "${inputs.nix-space}/hosts/${host}/pki/p22-intermediate.crt";
+        # Nothing this CA issues may name anything outside the Domain.
+        allowedDomains = domain.ca.allowedDomains;
+        allowedAddresses = domain.ca.allowedAddresses;
 
-      # Private key material: agenix targets decrypted at activation, owned by the
-      # step-ca service account. Never store-path literals.
-      intermediateKeyFile = config.age.secrets."step-ca/intermediate.key".path;
-      intermediatePasswordFile = config.age.secrets."step-ca/intermediate.password".path;
+        # Public certs (store paths are fine): the already-trusted root, and the
+        # intermediate the operator has signed with the offline root key.
+        rootCertFile = ../../secrets/certs/p22-ca.crt;
+        intermediateCertFile = "${inputs.nix-space}/hosts/${host}/pki/p22-intermediate.crt";
 
-      ssh = {
-        # Trust the p22.lan SSH Host CA: Domain hosts showing a host certificate are
-        # recognised with no known_hosts entry, and short names are tried as
-        # <name>.p22.lan first.
-        domainTrust.domains = lib.optional (hasTag "p22" tags) nixSpaceLib.domainDescriptor."p22.lan";
+        # Private key material: agenix targets decrypted at activation, owned by the
+        # step-ca service account. Never store-path literals.
+        intermediateKeyFile = config.age.secrets."step-ca/intermediate.key".path;
+        intermediatePasswordFile = config.age.secrets."step-ca/intermediate.password".path;
 
-        hostCAKeyFile = config.age.secrets."step-ca/ssh_host_ca".path;
-        userCAKeyFile = config.age.secrets."step-ca/ssh_user_ca".path;
+        ssh = {
+          hostCAKeyFile = config.age.secrets."step-ca/ssh_host_ca".path;
+          userCAKeyFile = config.age.secrets."step-ca/ssh_user_ca".path;
 
-        # Operator-held JWK provisioner for each host's first host cert; renewals
-        # then go through SSHPOP.
-        hostProvisioner = {
-          publicKeyFile = "${inputs.nix-space}/hosts/${host}/pki/hosts-provisioner.pub.json";
-          encryptedKeyFile = "${inputs.nix-space}/hosts/${host}/pki/hosts-provisioner.key.jwe";
+          # Operator-held JWK provisioner for each host's first host cert; renewals
+          # then go through SSHPOP.
+          hostProvisioner = {
+            publicKeyFile = "${inputs.nix-space}/hosts/${host}/pki/hosts-provisioner.pub.json";
+            encryptedKeyFile = "${inputs.nix-space}/hosts/${host}/pki/hosts-provisioner.key.jwe";
+          };
+
+          # User certs, only after a kanidm login. Everyday certs last a working
+          # day; admin certs last an hour and need a fresh login as `-adm`.
+          userProvisioners = [
+            {
+              name = "kanidm";
+              kind = "standard";
+              inherit (domain.oidc.standard) clientId configurationEndpoint;
+              certDuration = "16h";
+              defaultCertDuration = "12h";
+              adminGroup = domain.groups.admins;
+            }
+            {
+              name = "kanidm-elevated";
+              kind = "elevated";
+              inherit (domain.oidc.elevated) clientId configurationEndpoint;
+              certDuration = "1h";
+              defaultCertDuration = "1h";
+              adminGroup = domain.groups.admins;
+              # An admin cert needs a passkey touch within the last 2 minutes,
+              # not just a kanidm browser session that's still open.
+              maxLoginAge = 120;
+            }
+          ];
         };
+      };
+
+      # kanidm, the directory, served with idm1's internal ACME cert.
+      kanidm-server = {
+        enable = true;
+        package = pkgs.kanidm_1_11;
+        inherit (node) fqdn;
+        inherit (domain) domain;
+        inherit (domain.idm) origin;
+      };
+
+      # idm1's own TLS cert (idm1.p22.lan) from its own step-ca over ACME, 7-day
+      # lifetime.
+      internal-acme = {
+        enable = true;
+        directoryUrl = domain.ca.acmeDirectory;
+        certs = [ node.fqdn ];
+      };
+
+      # idm1 presents its own SSH host certificate, renewed daily against its own
+      # step-ca. The first cert is admin-signed.
+      ssh-host-cert = {
+        enable = true;
+        caUrl = domain.ca.url;
+        rootCertFile = ../../secrets/certs/p22-ca.crt;
       };
     };
 
-    # idm1's own TLS cert (idm1.p22.lan) from its own step-ca over ACME, 7-day
-    # lifetime.
-    internal-acme = {
+    # Only elevated sessions log in here with a cert: idm1 holds the CA keys.
+    # This also brings the SSH User CA trust.
+    identity.login = {
       enable = true;
-      directoryUrl = domain.ca.acmeDirectory;
-      certs = [ node.fqdn ];
+      inherit domain;
+      acceptGroups = [ domain.groups.admins ];
     };
 
-    # idm1 presents its own SSH host certificate, renewed daily against its own
-    # step-ca. The first cert is admin-signed.
-    ssh-host-cert = {
+    # The local way in when kanidm is broken, which on idm1 is also the way
+    # to fix kanidm. SSH only: idm1 has no YubiKey at its console.
+    identity.breakglass = {
       enable = true;
-      caUrl = domain.ca.url;
-      rootCertFile = ../../secrets/certs/p22-ca.crt;
+      inherit domain;
     };
   };
 
@@ -153,9 +283,6 @@ in
       "step-ca/ssh_host_ca" = caSecret "step-ca/ssh_host_ca";
       "step-ca/ssh_user_ca" = caSecret "step-ca/ssh_user_ca";
     };
-
-  # Trust the SSH USER CA now.
-  services.openssh.settings.TrustedUserCAKeys = "${inputs.nix-space}/hosts/${host}/pki/ssh_user_ca.pub";
 
   # Bootstrap: passwordless sudo for wheel so the remote deploy
   # (`nixos-rebuild --target-host pete@idm1.p22 --use-remote-sudo`) works

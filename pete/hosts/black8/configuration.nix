@@ -89,9 +89,9 @@ in
         enable = true;
         authorizedKeys = [
           # Primary YubiKey
-          "sk-ssh-ed25519@openssh.com AAAAGnNrLXNzaC1lZDI1NTE5QG9wZW5zc2guY29tAAAAIEFU2BKDdywiMqeD7LY8lgKeBo0mjHEyP7ej+Y2JNuJDAAAABHNzaDo= pete@framework16"
+          "sk-ssh-ed25519@openssh.com AAAAGnNrLXNzaC1lZDI1NTE5QG9wZW5zc2guY29tAAAAIJFGmlG/CcvESUuFCGx66DyW9GUqWoMR+Almk1i+E98CAAAACHNzaDpwZXRl pete-primary@p22.lan"
           # Backup YubiKey
-          "sk-ssh-ed25519@openssh.com AAAAGnNrLXNzaC1lZDI1NTE5QG9wZW5zc2guY29tAAAAIHwNQ411TYRwGAGINX4i4FI7Ek7lfTQv0s8vbXmnqVh/AAAABHNzaDo= pete@framework16"
+          "sk-ssh-ed25519@openssh.com AAAAGnNrLXNzaC1lZDI1NTE5QG9wZW5zc2guY29tAAAAICjaf/0nEezgVctqf3IkMC3T6oeS6RP3ap1owC939VgWAAAACHNzaDpwZXRl pete-backup@p22.lan"
           # Nix daemon builder key
           "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKDa64nzci/B0UqrvqJxmzVJgI3c7f8LD48x3UBwD8jQ remotebuild@p22"
         ];
@@ -116,15 +116,46 @@ in
       yubikey = {
         enable = true;
 
-        # yubikey-pam-u2f.nix minus its global enable. Same origin and appid, so
-        # nothing is re-enrolled; users = {} keeps reading ~/.config/Yubico/u2f_keys.
+        # Console logins use the domain's origin and one central mapping
+        # (/etc/u2f_mappings) instead of each user's ~/.config/Yubico/u2f_keys.
+        # The break-glass account adds its own keys to the same mapping.
         u2f = {
           enable = true;
-          # P22 tag
-          origin = "pam://p22";
+          origin = nixSpaceLib.domainDescriptor."p22.lan".pamOrigin;
+          users = import ../../console-keys.nix;
+        };
+
+        # A YubiKey at the console needs its PIN too, not just a touch. The
+        # password still works after it.
+        pam.services.login = {
+          u2fPin = true;
         };
       };
     };
+
+    # The local way in when kanidm login is broken. Opened only by the
+    # break-glass YubiKeys in the domain descriptor, with PIN and touch.
+    identity.breakglass = lib.mkIf (hasTag "p22" tags) {
+      enable = true;
+      domain = nixSpaceLib.domainDescriptor."p22.lan";
+    };
+
+    # Everyday SSH users and elevated sessions from the p22.lan domain log in
+    # with a kanidm-backed cert. kanidm-unixd must match idm1's kanidm release.
+    identity.login = lib.mkIf (hasTag "p22" tags) (
+      let
+        domain = nixSpaceLib.domainDescriptor."p22.lan";
+      in
+      {
+        enable = true;
+        inherit domain;
+        acceptGroups = [
+          domain.groups.sshUsers
+          domain.groups.admins
+        ];
+        package = pkgs.kanidm_1_11;
+      }
+    );
 
     services = {
       # black8 presents an SSH host certificate for black8.p22.lan, renewed daily
@@ -138,7 +169,7 @@ in
 
       nfsMount = lib.mkIf (hasTag "p22" tags) {
         enable = true;
-        server = "backupsvr.p22";
+        server = "backup.p22.lan";
         shares = {
           share.remotePath = "/mnt/user/share";
           open.remotePath = "/mnt/user/open";
