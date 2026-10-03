@@ -1,7 +1,6 @@
 # Home-manager configuration specific to silver16
 #
-{ ... }:
-{
+_: {
   nixSpace = {
     hyprland = {
       nvidia = true;

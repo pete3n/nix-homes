@@ -276,7 +276,10 @@ in
         DNSSEC = "allow-downgrade";
         DNSOverTLS = "opportunistic";
         DNS = [ "192.168.1.1" ];
-        Domains = [ "~." "p22.lan" ];
+        Domains = [
+          "~."
+          "p22.lan"
+        ];
         FallbackDNS = [
           "1.1.1.1"
           "8.8.8.8"
