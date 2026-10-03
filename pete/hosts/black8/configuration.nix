@@ -62,6 +62,11 @@ in
   ];
 
   nixSpace = {
+    # Trust the p22.lan SSH Host CA: Domain hosts showing a host certificate are
+    # recognised with no known_hosts entry, and short names are tried as
+    # <name>.p22.lan first.
+    ssh.domainTrust.domains = lib.optional (hasTag "p22" tags) nixSpaceLib.domainDescriptor."p22.lan";
+
     nix = {
       cache = {
         enable = true;
@@ -134,11 +139,6 @@ in
       enable = true;
       domain = nixSpaceLib.domainDescriptor."p22.lan";
     };
-
-    # Trust the p22.lan SSH Host CA: Domain hosts showing a host certificate are
-    # recognised with no known_hosts entry, and short names are tried as
-    # <name>.p22.lan first.
-    ssh.domainTrust.domains = lib.optional (hasTag "p22" tags) nixSpaceLib.domainDescriptor."p22.lan";
 
     # Everyday SSH users and elevated sessions from the p22.lan domain log in
     # with a kanidm-backed cert. kanidm-unixd must match idm1's kanidm release.
@@ -276,7 +276,7 @@ in
         DNSSEC = "allow-downgrade";
         DNSOverTLS = "opportunistic";
         DNS = [ "192.168.1.1" ];
-        Domains = [ "~p22" ];
+        Domains = [ "~." "p22.lan" ];
         FallbackDNS = [
           "1.1.1.1"
           "8.8.8.8"
