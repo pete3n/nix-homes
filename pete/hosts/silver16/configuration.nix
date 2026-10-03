@@ -293,6 +293,7 @@ in
       fw16PortRecovery = {
         enable = true;
         mainboard = "AI_300";
+				bootCheck.enable = true;
       };
       fw16UcsiRebind.enable = true;
 
