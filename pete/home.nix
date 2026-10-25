@@ -128,8 +128,14 @@ in
       encryptedBackup = false;
       patterns = [
         "R ${home}"
-        "- ${home}/.cache"
-        "- ${home}/Downloads"
+        # "!" not "-": a "-" exclude still walks into the directory (in case a
+        # later "+" re-includes something), so an unreadable dir inside it
+        # still fails the run. "!" skips the directory entirely.
+        "! ${home}/.cache"
+        "! ${home}/Downloads"
+        # Agent scratch dirs: throwaway, and test harnesses leave mode-000
+        # fixtures there that borg can't read (exit 105 fails the run).
+        "! sh:${home}/.local/state/claude/projects/*/tmp"
       ];
     };
 

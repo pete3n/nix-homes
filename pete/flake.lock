@@ -1102,10 +1102,10 @@
     "nix-space": {
       "flake": false,
       "locked": {
-        "lastModified": 1791040036,
-        "narHash": "sha256-S4cJ1T78nIgmcZhnNVTcYThHn6w06uDRZ45tXeYEylM=",
+        "lastModified": 1791900699,
+        "narHash": "sha256-pAWYG85lEL3+73iz/jcStYFDqVXj5/gWTmzIwnNS2WY=",
         "ref": "main",
-        "rev": "eb056df0c6b4de4ef7202dcd4595ee944eb29c77",
+        "rev": "3ebbfd702defe57409576da9294f6b3551c94515",
         "shallow": true,
         "type": "git",
         "url": "https://github.com/pete3n/nix-space.git"
